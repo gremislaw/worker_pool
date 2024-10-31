@@ -11,10 +11,11 @@ run: build
 	./bin/worker_pool
 
 test:
-	go test ./...
+	go test -v ./pool
+	make clean
 
 style:
 	go fmt ./...
 
 clean:
-	rm -rf ./bin out.txt
+	rm -rf ./bin *.txt pool/*.txt worker_pool

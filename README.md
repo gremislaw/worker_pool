@@ -24,6 +24,12 @@ make run
 - - `delete_worker <id>` - удалит <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
 - - `stop` - принудительно завершит программу
 
+## Запуск unit-тестов
+
+```bash
+make test
+```
+
 
 ## Пример
 

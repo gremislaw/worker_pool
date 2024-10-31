@@ -1,18 +1,18 @@
 package pool
 
-type Worker struct {
+type worker struct {
 	id   int
 	quit chan struct{}
 }
 
-func CreateWorker(id int) *Worker {
-	return &Worker{id, make(chan struct{})}
+func CreateWorker(id int) *worker {
+	return &worker{id, make(chan struct{})}
 }
 
-func (w *Worker) GetId() int {
+func (w *worker) GetId() int {
 	return w.id
 }
 
-func (w *Worker) Kill() {
+func (w *worker) Kill() {
 	close(w.quit)
 }
