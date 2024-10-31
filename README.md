@@ -19,10 +19,10 @@ make run
 ## Функционал
 
 - Программа принимает на вход запросы, который принимает значения:
-- - `add_job <data>` - создаст новый <strong>job</strong> с информацией <strong><_data_></strong>
-- - `add_worker <id>` - cоздаст нового <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
-- - `delete_worker <id>` - удалит <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
-- - `stop` - принудительно завершит программу
+- - `1 <data>` - создаст новый <strong>job</strong> с информацией <strong><_data_></strong>
+- - `2 <id>` - cоздаст нового <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
+- - `3 <id>` - удалит <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
+- - `4` - принудительно завершит программу
 
 ## Запуск unit-тестов
 
@@ -36,21 +36,21 @@ make test
 ### Ввод
 
 ```bash
-add_job backend
-add_job frontend
-add_job design
-add_job product
-add_job ml
-add_worker 3
-add_worker 3
-add_worker 1
-delete_worker 3
-add_job backend
-add_job frontend
-add_job design
-add_job product
+1 backend
+1 frontend
+1 design
+1 product
+1 ml
+2 3
+2 3
+2 1
+3 3
+1 backend
+1 frontend
+1 design
+1 product
 # чутка подождем, пусть воркер 1 поработает один
-add_worker 3
+2 3
 # подождите пока все выполнитcя
 stop
 ```

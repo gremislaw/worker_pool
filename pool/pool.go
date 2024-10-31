@@ -1,99 +1,113 @@
 package pool
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"time"
 	"sync"
-	"errors"
+	"time"
 )
 
+// Для обработки ошибок
+const (
+	NoSuchWorkerError       = "такого воркера нет"
+	WorkerExistsError       = "такой воркер существует"
+	CannotCreateWorkerError = "не удалось создать воркер"
+)
+
+/*
+	 ВоркерПул
+		workers: потокобезопасная мапа, хранящая воркеров по их номеру
+		Jobs: канал для передачи job'ов воркерам
+		Results: канал для получения результатов обработки job'ов
+		File: файл, в который будет записываться информация о происходящем в ВоркерПуле
+*/
+type WorkerPool struct {
+	workers *sync.Map
+	Jobs    chan string
+	Results chan string
+	File    *os.File
+}
+
+// Максимальный размер каналов
 var MaxBuffSize = 100_000
 
-type WorkerPool struct {
-	muFile *sync.Mutex
-	muMap *sync.Mutex
-	workers map[int]*worker
-	Jobs chan string
-	Results chan string
-	File *os.File
-}
-
-func CreateWorkerPool(file *os.File) *WorkerPool{
-	muFile := new(sync.Mutex)
-	muMap := new(sync.Mutex)
-	workers := make(map[int]*worker)
+// Cоздание нового ВоркерПула
+func CreateWorkerPool(file *os.File) *WorkerPool {
+	workers := new(sync.Map)
 	jobs := make(chan string, MaxBuffSize)
 	results := make(chan string, MaxBuffSize)
-	return &WorkerPool{muFile, muMap, workers, jobs, results, file}
+	return &WorkerPool{workers, jobs, results, file}
 }
 
-func (wp *WorkerPool) AddWorker(id int) error  {
-	if _, ok := wp.workers[id]; ok {
-		fmt.Println("\nтакой воркер уже существует")
-		return errors.New("такой воркер уже существует")
+// Добавление нового воркера в ВоркерПул и сразу запуская воркер
+func (wp *WorkerPool) AddWorker(id int) error {
+	if _, ok := wp.workers.Load(id); ok {
+		fmt.Println(WorkerExistsError)
+		return errors.New(WorkerExistsError)
 	}
-	wp.SetWorker(id)
-	wp.safeWrite(fmt.Sprintf("Воркер %d добавлен.\n", id))
-	go wp.StartWorker(id)
+	w := CreateWorker(id)
+	if w == nil { // Проверка на валидость созданного воркера
+		fmt.Println(CannotCreateWorkerError)
+		return errors.New(CannotCreateWorkerError)
+	}
+	wp.SetWorker(w) // Добавление воркера в ВоркерПул
+	wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", id))
+	go wp.startWorker(w) // Запуск воркера
 	return nil
 }
 
-func (wp *WorkerPool) StartWorker(id int) {
-	w := wp.GetWorker(id)
-	if w == nil {
-		fmt.Printf("\nворкер с ID %d не найден\n", id)
-		return
-}
+// Запуск воркера и обработка приходящих job'ов
+func (wp *WorkerPool) startWorker(w *worker) {
 	for {
 		select {
-		case j, ok := <-wp.Jobs:
+		case j, ok := <-wp.Jobs: // тут приходят job'ы
 			if !ok {
 				return
 			}
-			wp.safeWrite(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", id, j))
+			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", w.id, j))
 			time.Sleep(time.Second * 3)
-			wp.safeWrite(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
+			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", w.id, j))
 			wp.Results <- j + "обработана"
-		case <-w.quit:
-			wp.safeWrite(fmt.Sprintf("Воркер %d удален.\n", id))
+		case <-w.quit: // Конец работы воркера
+			wp.Write(fmt.Sprintf("Воркер %d удален.\n", w.id))
 			return
 		}
 	}
 }
 
+// Добавление нового job'а в ВоркерПул
 func (wp *WorkerPool) AddJob(s string) {
 	wp.Jobs <- s
 }
 
+// Завершение работы воркера и его удаление из ВоркерПула
 func (wp *WorkerPool) DeleteWorker(id int) error {
-	if _, ok := wp.workers[id]; !ok {
-		fmt.Println("\nтакого воркера нет")
-		return errors.New("такого воркера нет")
+	if _, ok := wp.workers.Load(id); !ok {
+		fmt.Println(NoSuchWorkerError)
+		return errors.New(NoSuchWorkerError)
 	}
 	w := wp.GetWorker(id)
 	w.Kill()
-	delete(wp.workers, id)
+	wp.workers.Delete(id)
 	return nil
 }
 
+// Получение воркера из ВоркерПула по номеру
 func (wp *WorkerPool) GetWorker(id int) *worker {
-	wp.muMap.Lock()
-	w := wp.workers[id]
-	wp.muMap.Unlock()
-	return w
+	w, ok := wp.workers.Load(id)
+	if !ok {
+		return nil
+	}
+	return w.(*worker)
 }
 
-func (wp *WorkerPool) SetWorker(id int) {
-	w := CreateWorker(id)
-	wp.muMap.Lock()
-	wp.workers[id] = w
-	wp.muMap.Unlock()
+// Добавление воркера в Воркерпул
+func (wp *WorkerPool) SetWorker(w *worker) {
+	wp.workers.Store(w.id, w)
 }
 
-func (wp *WorkerPool) safeWrite(s string) {
-	wp.muFile.Lock()
+// Запись в файл
+func (wp *WorkerPool) Write(s string) {
 	wp.File.WriteString(s)
-	wp.muFile.Unlock()
 }
-

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"worker_pool/pool"
-	"worker_pool/cmd"
 	"os"
+	"worker_pool/cmd"
+	"worker_pool/pool"
 )
 
 func main() {

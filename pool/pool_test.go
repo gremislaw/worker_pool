@@ -1,9 +1,9 @@
 package pool
 
 import (
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestWorker_Create(t *testing.T) {
@@ -120,8 +120,8 @@ func TestWorkerPool_WorkerDoJobs(t *testing.T) {
 		wp.AddWorker(id)
 		wp.AddJob("vk developer")
 		wp.AddJob("intern backend")
-		<- wp.Results
-		<- wp.Results
+		<-wp.Results
+		<-wp.Results
 		assert.Equal(len(wp.Jobs), 0)
 		wp.DeleteWorker(id)
 	}
@@ -137,8 +137,8 @@ func TestWorkerPool_ManyWorkersDoJobs(t *testing.T) {
 		}
 		wp.AddJob("vk developer")
 		wp.AddJob("intern backend")
-		<- wp.Results
-		<- wp.Results
+		<-wp.Results
+		<-wp.Results
 		assert.Equal(len(wp.Jobs), 0)
 		for i := 1; i < 100000; i++ {
 			wp.DeleteWorker(i)
@@ -158,7 +158,7 @@ func TestWorkerPool_ManyWorkersDoManyJobs(t *testing.T) {
 			wp.AddJob("vk developer")
 		}
 		for i := 1; i < 100000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		assert.Equal(len(wp.Jobs), 0)
 		for i := 1; i < 100000; i++ {
@@ -180,13 +180,13 @@ func TestWorkerPool_ManyWorkersDoManyJobs_DynamicAddWorkers(t *testing.T) {
 		}
 		assert.Greater(len(wp.Jobs), 10000)
 		for i := 1; i < 10000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		for i := 10000; i < 100000; i++ {
 			wp.AddWorker(i)
 		}
 		for i := 10000; i < 100000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		assert.Equal(len(wp.Jobs), 0)
 		for i := 1; i < 100000; i++ {
@@ -208,13 +208,13 @@ func TestWorkerPool_ManyWorkersDoManyJobs_DynamicDeleteWorkers(t *testing.T) {
 		}
 		assert.Greater(len(wp.Jobs), 10000)
 		for i := 1; i < 10000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		for i := 1; i < 10000; i++ {
 			wp.DeleteWorker(i)
 		}
 		for i := 10000; i < 100000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		assert.Equal(len(wp.Jobs), 0)
 		for i := 10000; i < 60000; i++ {
@@ -236,7 +236,7 @@ func TestWorkerPool_ManyWorkersDoManyJobs_DynamicAddDeleteWorkers(t *testing.T) 
 		}
 		assert.Greater(len(wp.Jobs), 10000)
 		for i := 1; i < 10000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		for i := 1; i < 5000; i++ {
 			wp.DeleteWorker(i)
@@ -245,7 +245,7 @@ func TestWorkerPool_ManyWorkersDoManyJobs_DynamicAddDeleteWorkers(t *testing.T) 
 			wp.AddWorker(i)
 		}
 		for i := 10000; i < 100000; i++ {
-			<- wp.Results
+			<-wp.Results
 		}
 		assert.Equal(len(wp.Jobs), 0)
 		for i := 5000; i < 100000; i++ {
