@@ -1,31 +1,22 @@
 package pool
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"sync"
 	"time"
-)
-
-// Для обработки ошибок
-const (
-	NoSuchWorkerError       = "такого воркера нет"
-	WorkerExistsError       = "такой воркер существует"
-	CannotCreateWorkerError = "не удалось создать воркер"
 )
 
 /*
 	 ВоркерПул
-		workers: потокобезопасная мапа, хранящая воркеров по их номеру
 		Jobs: канал для передачи job'ов воркерам
 		Results: канал для получения результатов обработки job'ов
 		File: файл, в который будет записываться информация о происходящем в ВоркерПуле
 */
 type WorkerPool struct {
-	workers *sync.Map
+	cntWorkers int
 	Jobs    chan string
-	Results chan string
+	Results    chan string
+	deleteWorkers chan struct{}
 	File    *os.File
 }
 
@@ -34,77 +25,75 @@ var MaxBuffSize = 100_000
 
 // Cоздание нового ВоркерПула
 func CreateWorkerPool(file *os.File) *WorkerPool {
-	workers := new(sync.Map)
+	workers := 0
 	jobs := make(chan string, MaxBuffSize)
 	results := make(chan string, MaxBuffSize)
-	return &WorkerPool{workers, jobs, results, file}
+	deleteWorkers := make(chan struct{}, MaxBuffSize)
+	return &WorkerPool{workers, jobs, results, deleteWorkers, file}
 }
 
 // Добавление нового воркера в ВоркерПул и сразу запуская воркер
-func (wp *WorkerPool) AddWorker(id int) error {
-	if _, ok := wp.workers.Load(id); ok {
-		fmt.Println(WorkerExistsError)
-		return errors.New(WorkerExistsError)
+func (wp *WorkerPool) AddWorkers(cnt int) {
+	for i := 1; i <= cnt; i++ {
+		wp.cntWorkers++
+		wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", i))
+		go wp.startWorker(i) // Запуск воркера
 	}
-	w := CreateWorker(id)
-	if w == nil { // Проверка на валидость созданного воркера
-		fmt.Println(CannotCreateWorkerError)
-		return errors.New(CannotCreateWorkerError)
-	}
-	wp.SetWorker(w) // Добавление воркера в ВоркерПул
-	wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", id))
-	go wp.startWorker(w) // Запуск воркера
-	return nil
 }
 
 // Запуск воркера и обработка приходящих job'ов
-func (wp *WorkerPool) startWorker(w *worker) {
+func (wp *WorkerPool) startWorker(id int) {
 	for {
 		select {
 		case j, ok := <-wp.Jobs: // тут приходят job'ы
 			if !ok {
 				return
 			}
-			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", w.id, j))
+			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", id, j))
 			time.Sleep(time.Second * 3)
-			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", w.id, j))
+			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
 			wp.Results <- j + "обработана"
-		case <-w.quit: // Конец работы воркера
-			wp.Write(fmt.Sprintf("Воркер %d удален.\n", w.id))
+		case <-wp.deleteWorkers: // Конец работы воркера
+			wp.Write(fmt.Sprintf("Воркер %d удален.\n", id))
+			wp.cntWorkers--
 			return
 		}
 	}
 }
 
-// Добавление нового job'а в ВоркерПул
-func (wp *WorkerPool) AddJob(s string) {
-	wp.Jobs <- s
+// Добавление cnt новых job'ов в ВоркерПул со строкой data
+func (wp *WorkerPool) AddJobs(cnt int, data string) {
+	for i := 1; i <= cnt; i++ {
+		wp.Jobs <- data
+	}
 }
 
 // Завершение работы воркера и его удаление из ВоркерПула
-func (wp *WorkerPool) DeleteWorker(id int) error {
-	if _, ok := wp.workers.Load(id); !ok {
-		fmt.Println(NoSuchWorkerError)
-		return errors.New(NoSuchWorkerError)
+func (wp *WorkerPool) DeleteWorkers(cnt int) {
+	for i := 1; i <= cnt; i++ {
+		wp.deleteWorkers <- struct{}{}
 	}
-	w := wp.GetWorker(id)
-	w.Kill()
-	wp.workers.Delete(id)
-	return nil
 }
 
-// Получение воркера из ВоркерПула по номеру
-func (wp *WorkerPool) GetWorker(id int) *worker {
-	w, ok := wp.workers.Load(id)
-	if !ok {
-		return nil
+
+// Установка определенного количества воркеров
+func (wp *WorkerPool) SetWorkers(cnt int) {
+	wCnt := wp.GetWorkersCnt()
+	if cnt > wp.cntWorkers {
+		wp.AddWorkers(cnt - wCnt)
+	} else {
+		wp.DeleteWorkers(wCnt - cnt)
 	}
-	return w.(*worker)
 }
 
-// Добавление воркера в Воркерпул
-func (wp *WorkerPool) SetWorker(w *worker) {
-	wp.workers.Store(w.id, w)
+// Получение количества воркеров в пуле
+func (wp *WorkerPool) GetWorkersCnt() int {
+	return wp.cntWorkers
+}
+
+// Получение количества воркеров для удаления с пула
+func (wp *WorkerPool) GetWorkersCntForDelete() int {
+	return len(wp.deleteWorkers)
 }
 
 // Запись в файл

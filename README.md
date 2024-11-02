@@ -19,10 +19,10 @@ make run
 ## Функционал
 
 - Программа принимает на вход запросы, который принимает значения:
-- - `1 <data>` - создаст новый <strong>job</strong> с информацией <strong><_data_></strong>
-- - `2 <id>` - cоздаст нового <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
-- - `3 <id>` - удалит <strong>worker</strong> с <strong>id</strong> равным <strong><_id_></strong>
-- - `4` - принудительно завершит программу
+- - `1 <count> <data>` либо `add_job <count> <data>` - создаст новые <strong>job'ы</strong> с информацией <strong><_data_></strong> в количестве <strong><_count_></strong>
+- - `2 <count>` либо `add_worker <count>` - cоздаст новых <strong>worker'ов</strong> в количестве <strong>count</strong>
+- - `3 <count>` либо `delete_worker <count>` - удалит <strong>worker'ов</strong> в количестве <strong>count</strong>
+- - `4` либо `stop` - принудительно завершит программу
 
 ## Запуск unit-тестов
 

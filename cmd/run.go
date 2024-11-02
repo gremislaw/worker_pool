@@ -5,14 +5,6 @@ import (
 	"worker_pool/pool"
 )
 
-// Нельзя менять. Нужно для понимания какой запрос пришел
-const (
-	add_job = "1"
-	add_worker = "2"
-	delete_worker = "3"
-	stop = "4"
-)
-
 // Для разноцветного терминала
 
 const (
@@ -29,33 +21,38 @@ func Run(wp *pool.WorkerPool) {
 	// Выводит информацию о допустомом формате ввода
 	showGoodInput := func() {
 		fmt.Println(ColorYellow, "Допустимый формат ввода:")
-		fmt.Println(ColorBlue, "1 <data> - добавить job с информацией data,")
-		fmt.Println(" 2 <id> - добавить worker с номером id,")
-		fmt.Println(" 3 <id> - удалить worker с номером id")
-		fmt.Println(" 4 - принудительно завершить программу", ColorReset)
+		fmt.Println(" `1 <count> <data>` либо `add_job <count> <data>` - создаст новые job'ы с информацией `data` в количестве `count`,")
+		fmt.Println(" `2 <count>` либо `add_worker <count>` - cоздаст новых worker'ов в количестве `count`,")
+		fmt.Println(" `3 <count>` либо `delete_worker <count>` - удалит worker'ов в количестве `count`,")
+		fmt.Println(" `4` либо `stop` - принудительно завершить программу")
 	}
 
 	fmt.Println(ColorGreen, "Привет, сеньор! Спасибо, что запустил меня ;).")
 	showGoodInput()
+	fmt.Print(ColorBlue)
 
 	// Интерактивный режим ввода
 	fmt.Scan(&s)
 	for ; ; fmt.Scan(&s) {
 		switch s {
-		case add_job:
-			fmt.Scan(&s)
-			go wp.AddJob(s)
-		case add_worker:
+		case "1", "add_job":
+			fmt.Scan(&n, &s)
+			fmt.Println(ColorGreen, "- Добавление", n, "джобов со строкой", s, "...")
+			go wp.AddJobs(n, s)
+		case "2", "add_worker":
 			fmt.Scan(&n)
-			go wp.AddWorker(n)
-		case delete_worker:
+			fmt.Println(ColorGreen, "- Добавление", n, "воркеров...")
+			go wp.AddWorkers(n)
+		case "3", "delete_worker":
 			fmt.Scan(&n)
-			go wp.DeleteWorker(n)
-		case stop:
+			fmt.Println(ColorGreen, "- Удаление", n, "воркеров...")
+			go wp.DeleteWorkers(n)
+		case "4", "stop":
 			return
 		default:
 			fmt.Println(ColorRed, "Неверный формат ввода. Не расстраивайся", ColorReset)
 			showGoodInput()
 		}
+		fmt.Print(ColorBlue)
 	}
 }
