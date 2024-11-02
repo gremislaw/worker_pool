@@ -36,20 +36,17 @@ make test
 ### Ввод
 
 ```bash
-1 backend
-1 frontend
-1 design
-1 product
-1 ml
-2 3
-2 3
-2 1
-3 3
-1 backend
-1 frontend
-1 design
-1 product
-# чутка подождем, пусть воркер 1 поработает один
+1 1000 backend
+1 1000 frontend
+1 100 design
+1 100 product
+1 10 ml
+2 30
+2 300
+2 1000
+3 300
+1 100 backend
+1 100 frontend
 2 3
 # подождите пока все выполнитcя
 stop
@@ -79,5 +76,5 @@ stop
 Воркер 1 обрабатывает строку: product.
 Воркер 3 обработал строку design.
 Воркер 1 обработал строку product.
-
+...
 ```
