@@ -8,6 +8,7 @@ import (
 	"worker_pool/pool"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -18,6 +19,7 @@ type model struct {
 	choice string
 	inputs []textinput.Model
 	frame  int
+	spinner   spinner.Model
 	wp     *pool.WorkerPool
 }
 
@@ -46,7 +48,9 @@ func Run(wp *pool.WorkerPool) {
 
 // Инициализация модели для терминального интерфейса
 func (m model) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		m.spinner.Tick,
+	)
 }
 
 // Обновление модели при взаимодействии с TUI
@@ -86,6 +90,10 @@ func (m model) UpdateMainFrame(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = len(choices) - 1
 			}
 		}
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }
@@ -140,6 +148,10 @@ func (m model) UpdateInputFrame(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return m, tea.Batch(cmds...)
 		}
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 	cmd := m.updateInputs(msg)
 	return m, cmd
@@ -248,7 +260,7 @@ func (m model) ViewMainFrame() string {
 		}
 		s.WriteString("\n")
 	}
-	s.WriteString(subtleView())
+	s.WriteString(m.subtleView())
 	return mainStyle.Render(s.String())
 }
 
@@ -271,7 +283,7 @@ func (m model) ViewInputFrame() string {
 		button = &focusedButton
 	}
 	fmt.Fprintf(&s, "\n\n%s\n", *button)
-	s.WriteString(subtleView())
+	s.WriteString(m.subtleView())
 	return mainStyle.Render(s.String())
 }
 
@@ -286,8 +298,12 @@ func choicesView(label string) string {
 }
 
 // Отрисовка подсказок
-func subtleView() string {
+func (m *model) subtleView() string {
 	s := "\n"
+	s += textStyle.Render("Текущее количество Worker:", strconv.Itoa(m.wp.GetWorkersCnt()))
+	s += "\n"
+	s += textStyle.Render("Текущее количество Job:", strconv.Itoa(m.wp.GetJobCnt()))
+	s += "\n"
 	s += subtleStyle.Render("w/s, up/down: движение курсора, ") +
 		subtleStyle.Render("enter: выбор, ") +
 		subtleStyle.Render("q, esc: выход")
