@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"math/rand"
 )
 
 /*
@@ -62,7 +63,7 @@ func (wp *WorkerPool) startWorker(id int) {
 				return
 			}
 			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", id, j))
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second + time.Millisecond * time.Duration(rand.Int31n(3000)))
 			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
 			wp.Results <- j + "обработана"
 			wp.cntJobs--
