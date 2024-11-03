@@ -80,7 +80,7 @@ func TestWorkerPool_AddWorkers_NegativeCnt(t *testing.T) {
 	cnt := -5
 	var file *os.File = nil
 	wp := CreateWorkerPool(file)
-	assert.NotPanics(func() {wp.AddWorkers(cnt)})
+	assert.NotPanics(func() { wp.AddWorkers(cnt) })
 }
 
 func TestWorkerPool_AddJob(t *testing.T) {
@@ -124,7 +124,7 @@ func TestWorkerPool_DeleteWorker_NegativeCnt(t *testing.T) {
 	var file *os.File = nil
 	cnt := -10
 	wp := CreateWorkerPool(file)
-	assert.NotPanics(func() {wp.DeleteWorkers(cnt)})
+	assert.NotPanics(func() { wp.DeleteWorkers(cnt) })
 }
 
 func TestWorkerPool_WorkerDoJobs(t *testing.T) {

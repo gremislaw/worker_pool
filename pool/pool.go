@@ -13,11 +13,11 @@ import (
 		File: файл, в который будет записываться информация о происходящем в ВоркерПуле
 */
 type WorkerPool struct {
-	cntWorkers int
-	Jobs    chan string
-	Results    chan string
+	cntWorkers    int
+	Jobs          chan string
+	Results       chan string
 	deleteWorkers chan struct{}
-	File    *os.File
+	File          *os.File
 }
 
 // Максимальный размер каналов
@@ -63,6 +63,7 @@ func (wp *WorkerPool) startWorker(id int) {
 
 // Добавление cnt новых job'ов в ВоркерПул со строкой data
 func (wp *WorkerPool) AddJobs(cnt int, data string) {
+	wp.Write(fmt.Sprintf("%d джобов со строкой %s добавлено.\n", cnt, data))
 	for i := 1; i <= cnt; i++ {
 		wp.Jobs <- data
 	}
@@ -74,7 +75,6 @@ func (wp *WorkerPool) DeleteWorkers(cnt int) {
 		wp.deleteWorkers <- struct{}{}
 	}
 }
-
 
 // Установка определенного количества воркеров
 func (wp *WorkerPool) SetWorkers(cnt int) {
