@@ -2,9 +2,10 @@ package pool
 
 import (
 	"fmt"
-	"os"
-	"time"
 	"math/rand"
+	"os"
+	"sync/atomic"
+	"time"
 )
 
 /*
@@ -18,7 +19,7 @@ import (
 		File: файл, в который будет записываться информация о происходящем в ВоркерПуле
 */
 type WorkerPool struct {
-	cntWorkers    int
+	cntWorkers    *atomic.Int64
 	curId         int
 	Jobs          chan string
 	cntJobs       int
@@ -32,7 +33,7 @@ var MaxBuffSize = 100_000
 
 // Cоздание нового ВоркерПула
 func CreateWorkerPool(file *os.File) *WorkerPool {
-	workers := 0
+	workers := new(atomic.Int64)
 	curId := 0
 	jobs := make(chan string, MaxBuffSize)
 	cntJobs := 0
@@ -43,14 +44,14 @@ func CreateWorkerPool(file *os.File) *WorkerPool {
 
 // Добавление нового воркера в ВоркерПул и сразу запуская воркер
 func (wp *WorkerPool) AddWorkers(cnt int) {
-	if cnt + wp.cntWorkers > MaxBuffSize {
-		cnt = MaxBuffSize - wp.cntWorkers
+	if cnt + int(wp.cntWorkers.Load()) > MaxBuffSize {
+		cnt = MaxBuffSize - wp.GetWorkersCnt()
 	}
 	for i := 1; i <= cnt; i++ {
-		wp.cntWorkers++
+		go wp.startWorker(wp.curId) // Запуск воркера
+		wp.cntWorkers.Add(1)
 		wp.curId++
 		wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", wp.curId))
-		go wp.startWorker(wp.curId) // Запуск воркера
 	}
 }
 
@@ -69,7 +70,7 @@ func (wp *WorkerPool) startWorker(id int) {
 			wp.cntJobs--
 		case <-wp.deleteWorkers: // Конец работы воркера
 			wp.Write(fmt.Sprintf("Воркер %d удален.\n", id))
-			wp.cntWorkers--
+			wp.cntWorkers.Add(-1)
 			return
 		}
 	}
@@ -78,17 +79,20 @@ func (wp *WorkerPool) startWorker(id int) {
 // Добавление cnt новых job'ов в ВоркерПул со строкой data
 func (wp *WorkerPool) AddJobs(cnt int, data string) {
 	if cnt + wp.cntJobs > MaxBuffSize {
-		cnt = MaxBuffSize - wp.cntJobs
+		cnt = MaxBuffSize - wp.GetJobCnt()
 	}
-	wp.cntJobs += cnt
 	wp.Write(fmt.Sprintf("%d джобов со строкой %s добавлено.\n", cnt, data))
 	for i := 1; i <= cnt; i++ {
 		wp.Jobs <- data
+		wp.cntJobs++
 	}
 }
 
 // Завершение работы воркера и его удаление из ВоркерПула
 func (wp *WorkerPool) DeleteWorkers(cnt int) {
+	if cnt + wp.GetWorkersCntForDelete() > MaxBuffSize {
+		cnt = MaxBuffSize - wp.GetWorkersCntForDelete() 
+	}
 	for i := 1; i <= cnt; i++ {
 		wp.deleteWorkers <- struct{}{}
 	}
@@ -97,7 +101,7 @@ func (wp *WorkerPool) DeleteWorkers(cnt int) {
 // Установка определенного количества воркеров
 func (wp *WorkerPool) SetWorkers(cnt int) {
 	wCnt := wp.GetWorkersCnt()
-	if cnt > wp.cntWorkers {
+	if cnt > wp.GetWorkersCnt() {
 		wp.AddWorkers(cnt - wCnt)
 	} else {
 		wp.DeleteWorkers(wCnt - cnt)
@@ -106,7 +110,7 @@ func (wp *WorkerPool) SetWorkers(cnt int) {
 
 // Получение количества воркеров в пуле
 func (wp *WorkerPool) GetWorkersCnt() int {
-	return wp.cntWorkers
+	return int(wp.cntWorkers.Load())
 }
 
 // Получение количества работ в пуле
