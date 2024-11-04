@@ -20,9 +20,9 @@ import (
 */
 type WorkerPool struct {
 	cntWorkers    *atomic.Int64
-	curId         int
+	curId         *atomic.Int64
 	Jobs          chan string
-	cntJobs       int
+	cntJobs       *atomic.Int64
 	Results       chan string
 	deleteWorkers chan struct{}
 	File          *os.File
@@ -34,9 +34,9 @@ var MaxBuffSize = 100_000
 // Cоздание нового ВоркерПула
 func CreateWorkerPool(file *os.File) *WorkerPool {
 	workers := new(atomic.Int64)
-	curId := 0
+	curId := new(atomic.Int64)
 	jobs := make(chan string, MaxBuffSize)
-	cntJobs := 0
+	cntJobs := new(atomic.Int64)
 	results := make(chan string, MaxBuffSize)
 	deleteWorkers := make(chan struct{}, MaxBuffSize)
 	return &WorkerPool{workers, curId, jobs, cntJobs, results, deleteWorkers, file}
@@ -48,9 +48,9 @@ func (wp *WorkerPool) AddWorkers(cnt int) {
 		cnt = MaxBuffSize - wp.GetWorkersCnt()
 	}
 	for i := 1; i <= cnt; i++ {
-		go wp.startWorker(wp.curId) // Запуск воркера
+		go wp.startWorker(int(wp.curId.Load())) // Запуск воркера
 		wp.cntWorkers.Add(1)
-		wp.curId++
+		wp.curId.Add(1)
 		wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", wp.curId))
 	}
 }
@@ -67,7 +67,7 @@ func (wp *WorkerPool) startWorker(id int) {
 			time.Sleep(time.Second + time.Millisecond * time.Duration(rand.Int31n(3000)))
 			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
 			wp.Results <- j + "обработана"
-			wp.cntJobs--
+			wp.cntJobs.Add(-1)
 		case <-wp.deleteWorkers: // Конец работы воркера
 			wp.Write(fmt.Sprintf("Воркер %d удален.\n", id))
 			wp.cntWorkers.Add(-1)
@@ -78,13 +78,13 @@ func (wp *WorkerPool) startWorker(id int) {
 
 // Добавление cnt новых job'ов в ВоркерПул со строкой data
 func (wp *WorkerPool) AddJobs(cnt int, data string) {
-	if cnt + wp.cntJobs > MaxBuffSize {
+	if cnt + int(wp.cntJobs.Load()) > MaxBuffSize {
 		cnt = MaxBuffSize - wp.GetJobCnt()
 	}
 	wp.Write(fmt.Sprintf("%d джобов со строкой %s добавлено.\n", cnt, data))
 	for i := 1; i <= cnt; i++ {
 		wp.Jobs <- data
-		wp.cntJobs++
+		wp.cntJobs.Add(1)
 	}
 }
 
@@ -115,7 +115,7 @@ func (wp *WorkerPool) GetWorkersCnt() int {
 
 // Получение количества работ в пуле
 func (wp *WorkerPool) GetJobCnt() int {
-	return wp.cntJobs
+	return int(wp.cntJobs.Load())
 }
 
 // Получение количества воркеров для удаления с пула
