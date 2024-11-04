@@ -44,14 +44,14 @@ func CreateWorkerPool(file *os.File) *WorkerPool {
 
 // Добавление нового воркера в ВоркерПул и сразу запуская воркер
 func (wp *WorkerPool) AddWorkers(cnt int) {
-	if cnt + int(wp.cntWorkers.Load()) > MaxBuffSize {
+	if cnt + int(wp.cntWorkers.Load()) > MaxBuffSize && cnt >= 0{
 		cnt = MaxBuffSize - wp.GetWorkersCnt()
 	}
 	for i := 1; i <= cnt; i++ {
-		go wp.startWorker(int(wp.curId.Load())) // Запуск воркера
 		wp.cntWorkers.Add(1)
 		wp.curId.Add(1)
-		wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", wp.curId))
+		wp.Write(fmt.Sprintf("Воркер %d добавлен.\n", int(wp.curId.Load())))
+		go wp.startWorker(int(wp.curId.Load())) // Запуск воркера
 	}
 }
 
@@ -61,12 +61,15 @@ func (wp *WorkerPool) startWorker(id int) {
 		select {
 		case j, ok := <-wp.Jobs: // тут приходят job'ы
 			if !ok {
+				wp.Write(fmt.Sprintf("Воркер %d удален.\n", id))
+				wp.cntWorkers.Add(-1)
 				return
 			}
 			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", id, j))
 			time.Sleep(time.Second + time.Millisecond * time.Duration(rand.Int31n(3000)))
 			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
 			wp.Results <- j + "обработана"
+			wp.ClearOutChannel()
 			wp.cntJobs.Add(-1)
 		case <-wp.deleteWorkers: // Конец работы воркера
 			wp.Write(fmt.Sprintf("Воркер %d удален.\n", id))
@@ -78,7 +81,7 @@ func (wp *WorkerPool) startWorker(id int) {
 
 // Добавление cnt новых job'ов в ВоркерПул со строкой data
 func (wp *WorkerPool) AddJobs(cnt int, data string) {
-	if cnt + int(wp.cntJobs.Load()) > MaxBuffSize {
+	if cnt + int(wp.cntJobs.Load()) > MaxBuffSize && cnt >= 0{
 		cnt = MaxBuffSize - wp.GetJobCnt()
 	}
 	wp.Write(fmt.Sprintf("%d джобов со строкой %s добавлено.\n", cnt, data))
@@ -90,7 +93,7 @@ func (wp *WorkerPool) AddJobs(cnt int, data string) {
 
 // Завершение работы воркера и его удаление из ВоркерПула
 func (wp *WorkerPool) DeleteWorkers(cnt int) {
-	if cnt + wp.GetWorkersCntForDelete() > MaxBuffSize {
+	if cnt + wp.GetWorkersCntForDelete() > MaxBuffSize && cnt >= 0{
 		cnt = MaxBuffSize - wp.GetWorkersCntForDelete() 
 	}
 	for i := 1; i <= cnt; i++ {
@@ -126,4 +129,17 @@ func (wp *WorkerPool) GetWorkersCntForDelete() int {
 // Запись в файл
 func (wp *WorkerPool) Write(s string) {
 	wp.File.WriteString(s)
+}
+
+func (wp *WorkerPool) ClearOutChannel() {
+	if len(wp.Results) == MaxBuffSize {
+		for {
+			select {
+			case <-wp.Results:
+				// Игнорируем элемент
+			default:
+				return
+			}
+		}
+	}
 }

@@ -54,7 +54,7 @@ func TestWorkerPool_AddWorkers(t *testing.T) {
 	var file *os.File = nil
 	wp := CreateWorkerPool(file)
 	wp.AddWorkers(cnt)
-	assert.Equal(wp.cntWorkers, cnt)
+	assert.Equal(int(wp.cntWorkers.Load()), cnt)
 }
 
 func TestWorkerPool_AddWorkers_Many(t *testing.T) {
@@ -63,7 +63,7 @@ func TestWorkerPool_AddWorkers_Many(t *testing.T) {
 	var file *os.File = nil
 	wp := CreateWorkerPool(file)
 	wp.AddWorkers(cnt)
-	assert.Equal(wp.cntWorkers, cnt)
+	assert.Equal(int(wp.cntWorkers.Load()), cnt)
 }
 
 func TestWorkerPool_AddWorkers_ZeroCnt(t *testing.T) {
@@ -72,7 +72,7 @@ func TestWorkerPool_AddWorkers_ZeroCnt(t *testing.T) {
 	var file *os.File = nil
 	wp := CreateWorkerPool(file)
 	wp.AddWorkers(cnt)
-	assert.Equal(wp.cntWorkers, cnt)
+	assert.Equal(int(wp.cntWorkers.Load()), cnt)
 }
 
 func TestWorkerPool_AddWorkers_NegativeCnt(t *testing.T) {
