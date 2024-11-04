@@ -44,7 +44,7 @@ func CreateWorkerPool(file *os.File) *WorkerPool {
 
 // Добавление нового воркера в ВоркерПул и сразу запуская воркер
 func (wp *WorkerPool) AddWorkers(cnt int) {
-	if cnt + int(wp.cntWorkers.Load()) > MaxBuffSize && cnt >= 0{
+	if cnt+int(wp.cntWorkers.Load()) > MaxBuffSize && cnt >= 0 {
 		cnt = MaxBuffSize - wp.GetWorkersCnt()
 	}
 	for i := 1; i <= cnt; i++ {
@@ -66,7 +66,7 @@ func (wp *WorkerPool) startWorker(id int) {
 				return
 			}
 			wp.Write(fmt.Sprintf("Воркер %d обрабатывает строку: %s.\n", id, j))
-			time.Sleep(time.Second + time.Millisecond * time.Duration(rand.Int31n(3000)))
+			time.Sleep(time.Second + time.Millisecond*time.Duration(rand.Int31n(3000)))
 			wp.Write(fmt.Sprintf("Воркер %d обработал строку %s.\n", id, j))
 			wp.Results <- j + "обработана"
 			wp.ClearOutChannel()
@@ -81,7 +81,7 @@ func (wp *WorkerPool) startWorker(id int) {
 
 // Добавление cnt новых job'ов в ВоркерПул со строкой data
 func (wp *WorkerPool) AddJobs(cnt int, data string) {
-	if cnt + int(wp.cntJobs.Load()) > MaxBuffSize && cnt >= 0{
+	if cnt+int(wp.cntJobs.Load()) > MaxBuffSize && cnt >= 0 {
 		cnt = MaxBuffSize - wp.GetJobCnt()
 	}
 	wp.Write(fmt.Sprintf("%d джобов со строкой %s добавлено.\n", cnt, data))
@@ -93,8 +93,8 @@ func (wp *WorkerPool) AddJobs(cnt int, data string) {
 
 // Завершение работы воркера и его удаление из ВоркерПула
 func (wp *WorkerPool) DeleteWorkers(cnt int) {
-	if cnt + wp.GetWorkersCntForDelete() > MaxBuffSize && cnt >= 0{
-		cnt = MaxBuffSize - wp.GetWorkersCntForDelete() 
+	if cnt+wp.GetWorkersCntForDelete() > MaxBuffSize && cnt >= 0 {
+		cnt = MaxBuffSize - wp.GetWorkersCntForDelete()
 	}
 	if cnt > wp.GetWorkersCnt() {
 		cnt = wp.GetWorkersCnt()

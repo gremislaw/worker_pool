@@ -7,20 +7,20 @@ import (
 	"strings"
 	"worker_pool/pool"
 
-	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 // Структура для работы с терминальным интерфейсом
 type model struct {
-	cursor int
-	choice string
-	inputs []textinput.Model
-	frame  int
-	spinner   spinner.Model
-	wp     *pool.WorkerPool
+	cursor  int
+	choice  string
+	inputs  []textinput.Model
+	frame   int
+	spinner spinner.Model
+	wp      *pool.WorkerPool
 }
 
 // Основа для стилизирования интерйфейса
