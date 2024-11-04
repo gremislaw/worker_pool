@@ -96,6 +96,9 @@ func (wp *WorkerPool) DeleteWorkers(cnt int) {
 	if cnt + wp.GetWorkersCntForDelete() > MaxBuffSize && cnt >= 0{
 		cnt = MaxBuffSize - wp.GetWorkersCntForDelete() 
 	}
+	if cnt > wp.GetWorkersCnt() {
+		cnt = wp.GetWorkersCnt()
+	}
 	for i := 1; i <= cnt; i++ {
 		wp.deleteWorkers <- struct{}{}
 	}
